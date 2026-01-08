@@ -39,4 +39,16 @@ public class JobEvent {
         this.payload = payload;
         this.createdAt = OffsetDateTime.now();
     }
+
+    public UUID getJobId() {
+        return jobId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getPayload() {
+        return payload;
+    }
 }
