@@ -24,7 +24,6 @@ public class Job {
     @Column(nullable = false)
     private String type;
 
-    // jsonb를 string으로 저장(간단/안전) DB 컬럼은 jsonb지만 문자열로 넣어도 postgres 가 캐스팅한다.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
     private String payload;
@@ -99,7 +98,7 @@ public class Job {
     }
 
     public void requestCancel() {
-        // Week1 정책: PENDING 이면 즉시 CANCELED, RUNNING 이면 cancelRequested=true
+        // PENDING 이면 즉시 CANCELED, RUNNING 이면 cancelRequested=true
         if (this.status == JobStatus.PENDING) {
             this.status = JobStatus.CANCELED;
         } else if (this.status == JobStatus.RUNNING) {

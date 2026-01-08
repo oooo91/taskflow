@@ -24,7 +24,7 @@ public class JobService {
 
     @Transactional
     public Job create(JobCreateRequest req) {
-        // 1) 멱등 처리: jobKey 가 있으면 이미 있는지 먼저 확인
+        // 1) 멱등: jobKey 가 있으면 이미 있는지 먼저 확인
         if (req.jobKey != null && !req.jobKey.isBlank()) {
             Optional<Job> existing = jobRepository.findByJobKey(req.jobKey);
             if (existing.isPresent()) {
