@@ -43,6 +43,9 @@ public class Job {
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "worker_id")
+    private String workerId;
+
     @Version
     private long version;
 
@@ -93,6 +96,10 @@ public class Job {
         return updatedAt;
     }
 
+    public String getWorkerId() {
+        return workerId;
+    }
+
     public void touch() {
         this.updatedAt = OffsetDateTime.now();
     }
@@ -106,6 +113,16 @@ public class Job {
         } else {
             // 이미 종료 상태면 no-op 또는 예외 발생
         }
+        touch();
+    }
+
+    public void markSuccess() {
+        this.status = JobStatus.SUCCESS;
+        touch();
+    }
+
+    public void markFailed() {
+        this.status = JobStatus.FAILED;
         touch();
     }
 

@@ -1,4 +1,4 @@
-package com.domain.taskflow.service;
+package com.domain.taskflow.unit.service;
 
 import com.domain.taskflow.api.dto.JobCreateRequest;
 import com.domain.taskflow.domain.Job;
@@ -6,7 +6,9 @@ import com.domain.taskflow.domain.JobEvent;
 import com.domain.taskflow.domain.JobStatus;
 import com.domain.taskflow.repo.JobEventRepository;
 import com.domain.taskflow.repo.JobRepository;
+import com.domain.taskflow.service.JobService;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,6 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
+
+@Tag("unit")
 @ExtendWith(MockitoExtension.class)
 class JobServiceTest {
 

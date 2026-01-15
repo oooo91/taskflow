@@ -10,7 +10,7 @@ description = 'taskflow'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
@@ -36,6 +36,9 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // 추가
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
+    testImplementation 'org.testcontainers:postgresql:1.20.4'
 }
 
 tasks.named('test') {
