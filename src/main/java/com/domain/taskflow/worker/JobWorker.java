@@ -17,21 +17,21 @@ import java.util.concurrent.Executors;
 public class JobWorker {
 
     private final JobRepository jobRepository;
-    private final JobRunner jobRunner;
+    private final JobExecutionCoordinator coordinator;
 
     // 워커 풀
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
 
     /**
-     * 1초마다 PENDING 상태인 Job을 주워서 풀에 던진다.
+     * 5초마다 PENDING 상태인 Job을 주워서 풀에 던진다.
      */
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 5000)
     public void tick() {
         OffsetDateTime now = OffsetDateTime.now();
         List<Job> candidates = jobRepository.findRunnablePending(now, PageRequest.of(0, 10));
         for (Job job : candidates) {
             // 비동기로 실행 (워커풀)
-            pool.submit(() -> jobRunner.runOne(job.getId()));
+            pool.submit(() -> coordinator.runOneWithLock(job.getId()));
         }
     }
 }
