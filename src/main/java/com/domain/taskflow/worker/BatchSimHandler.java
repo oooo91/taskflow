@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * 배치 작업 시뮬레이션 Job (테스트 용도)
  */
-@Component
+@Component("BATCH_SIM")
 public class BatchSimHandler implements JobHandler {
 
     private final ObjectMapper om = new ObjectMapper();
@@ -20,15 +20,16 @@ public class BatchSimHandler implements JobHandler {
      * @throws Exception
      */
     @Override
-    public void execute(Job job) throws Exception {
+    public void execute(Job job, int attemptNo) throws Exception {
         JsonNode root = om.readTree(job.getPayload());
-        long sleepMs = root.has("sleepMs") ? root.get("sleepMs").asLong() : 500;
-        boolean shouldFail = root.has("shouldFail") && root.get("shouldFail").asBoolean();
+        long sleepMs = root.has("sleepMs") ? root.get("sleepMs").asLong() : 200;
+        int failTimes = root.has("failTimes") ? root.get("failTimes").asInt() : 0;
 
         Thread.sleep(sleepMs);
 
-        if (shouldFail) {
-            throw new RuntimeException("BATCH_SIM forced failure");
+        // attemptNo가 failTimes 이하인 동안 실패
+        if (attemptNo <= failTimes) {
+            throw new RuntimeException("BATCH_SIM forced failure. attemptNo=" + attemptNo);
         }
     }
 }

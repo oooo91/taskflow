@@ -18,6 +18,7 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     /**
      * DB CAS 업데이트 쿼리 추가
      * 리턴값 int가 업데이트된 row 수 반환
+     *
      * @param jobId
      * @param workerId
      * @param now
@@ -25,28 +26,46 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
      */
     @Modifying
     @Query("""
-                update Job j
-                    set j.status = com.domain.taskflow.domain.JobStatus.RUNNING, 
-                        j.workerId = :workerId, 
-                        j.updatedAt = :now
-                where j.id = :jobId
-                    and j.status = com.domain.taskflow.domain.JobStatus.PENDING 
+            update Job j
+                set j.status = com.domain.taskflow.domain.JobStatus.RUNNING, 
+                    j.workerId = :workerId, 
+                    j.updatedAt = :now
+            where j.id = :jobId
+                and j.status = com.domain.taskflow.domain.JobStatus.PENDING 
             """)
     int claimRunning(@Param("jobId") UUID jobId,
                      @Param("workerId") String workerId,
-                     @Param("now")OffsetDateTime now);
+                     @Param("now") OffsetDateTime now);
 
     /**
      * PENDING 후보 조회 쿼리 (폴링용)
+     *
      * @param now
      * @param pageable
      * @return
      */
     @Query("""
-        select j from Job j 
-        where j.status = com.domain.taskflow.domain.JobStatus.PENDING 
-        and (j.scheduledAt is null or j.scheduledAt <= :now) 
-        order by j.createdAt asc 
-    """)
+                select j from Job j 
+                where j.status = com.domain.taskflow.domain.JobStatus.PENDING 
+                and (j.scheduledAt is null or j.scheduledAt <= :now) 
+                order by j.createdAt asc 
+            """)
     List<Job> findRunnablePending(@Param("now") OffsetDateTime now, Pageable pageable);
+
+    /**
+     * RETRY_WAIT -> PENDING 전환
+     *
+     * @param now
+     * @return
+     */
+    @Modifying
+    @Query("""
+                update Job j
+                    set j.status = com.domain.taskflow.domain.JobStatus.PENDING, 
+                    j.updatedAt = :now
+                where j.status = com.domain.taskflow.domain.JobStatus.RETRY_WAIT
+                and j.nextRunAt <= :now
+            """)
+    int releaseRetryWaitToPending(@Param("now") OffsetDateTime now);
+
 }

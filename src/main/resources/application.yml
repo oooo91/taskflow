@@ -28,3 +28,8 @@ logging:
     org.hibernate.SQL: debug
     org.flywaydb: debug
     com.zaxxer.hikari: debug
+
+taskflow:
+  retry:
+    base-ms: 50
+    cap-ms: 200
