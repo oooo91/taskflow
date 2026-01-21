@@ -46,6 +46,19 @@ public class Job {
     @Column(name = "worker_id")
     private String workerId;
 
+    private OffsetDateTime nextRunAt;
+
+    @Column(nullable = false)
+    private int maxAttempts = 3;
+
+    @Column(nullable = false)
+    private int attemptCount = 0;
+
+    private String lastErrorCode;
+
+    @Column(columnDefinition = "text")
+    private String lastErrorMessage;
+
     @Version
     private long version;
 
@@ -100,6 +113,27 @@ public class Job {
         return workerId;
     }
 
+
+    public OffsetDateTime getNextRunAt() {
+        return nextRunAt;
+    }
+
+    public int getMaxAttempts() {
+        return maxAttempts;
+    }
+
+    public int getAttemptCount() {
+        return attemptCount;
+    }
+
+    public String getLastErrorCode() {
+        return lastErrorCode;
+    }
+
+    public String getLastErrorMessage() {
+        return lastErrorMessage;
+    }
+
     public void touch() {
         this.updatedAt = OffsetDateTime.now();
     }
@@ -116,14 +150,37 @@ public class Job {
         touch();
     }
 
-    public void markSuccess() {
-        this.status = JobStatus.SUCCESS;
+    public void markRetryWait(OffsetDateTime nextRunAt, String errorCode, String errorMessage) {
+        this.status = JobStatus.RETRY_WAIT;
+        this.nextRunAt = nextRunAt;
+        this.lastErrorCode = errorCode;
+        this.lastErrorMessage = errorMessage;
+        this.attemptCount += 1;
         touch();
     }
 
-    public void markFailed() {
+    public void markFailedFinal(String errorCode, String errorMessage) {
         this.status = JobStatus.FAILED;
+        this.nextRunAt = null;
+        this.lastErrorCode = errorCode;
+        this.lastErrorMessage = errorMessage;
+        this.attemptCount += 1;
         touch();
     }
+
+    public void markCanceledFinal() {
+        this.status = JobStatus.CANCELED;
+        this.nextRunAt = null;
+        this.attemptCount += 1;
+        touch();
+    }
+
+    public void markSuccessFinal() {
+        this.status = JobStatus.SUCCESS;
+        this.nextRunAt = null;
+        this.attemptCount += 1;
+        touch();
+    }
+
 
 }
