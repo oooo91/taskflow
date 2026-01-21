@@ -85,7 +85,7 @@ public class JobAttempt {
         this.endedAt = OffsetDateTime.now();
     }
 
-    public void markFiled(String errorCode, String errorMessage) {
+    public void markFailed(String errorCode, String errorMessage) {
         this.status = JobAttemptStatus.FAILED;
         this.errorCode = errorCode;
         this.errorMessage = errorMessage;
