@@ -6,6 +6,7 @@ import com.domain.taskflow.repo.JobRepository;
 import com.domain.taskflow.service.JobService;
 import com.domain.taskflow.support.IntegrationTestBase;
 import com.domain.taskflow.worker.JobRunner;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Tag("integration")
 public class Week2_WorkerSingleExecutionTest extends IntegrationTestBase {
     private final JobService jobService;
     private final JobRunner jobRunner;

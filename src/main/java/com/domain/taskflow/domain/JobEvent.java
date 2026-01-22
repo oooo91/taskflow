@@ -33,6 +33,10 @@ public class JobEvent {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "seq", insertable = false, updatable = false)
+    private Long seq;
+
+    @Column(name = "published_at")
     private OffsetDateTime publishedAt;
 
     public JobEvent(UUID id, UUID jobId, String eventType, String payload) {
@@ -53,5 +57,17 @@ public class JobEvent {
 
     public String getPayload() {
         return payload;
+    }
+
+    public Long getSeq() {
+        return seq;
+    }
+
+    public OffsetDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void markPublished(OffsetDateTime now) {
+        this.publishedAt = now;
     }
 }

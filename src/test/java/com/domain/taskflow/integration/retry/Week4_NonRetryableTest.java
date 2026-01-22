@@ -7,6 +7,7 @@ import com.domain.taskflow.repo.JobRepository;
 import com.domain.taskflow.service.JobService;
 import com.domain.taskflow.support.IntegrationTestBase;
 import com.domain.taskflow.worker.JobRunner;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
+@Tag("integration")
 @SpringBootTest
 public class Week4_NonRetryableTest extends IntegrationTestBase {
 

@@ -8,6 +8,7 @@ import com.domain.taskflow.retry.RetryScheduler;
 import com.domain.taskflow.service.JobService;
 import com.domain.taskflow.support.IntegrationTestBase;
 import com.domain.taskflow.worker.JobRunner;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,8 +16,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
+
 @ActiveProfiles("test")
+@Tag("integration")
 @SpringBootTest
 public class Week4_MaxAttemptsTest extends IntegrationTestBase {
 
@@ -40,6 +44,7 @@ public class Week4_MaxAttemptsTest extends IntegrationTestBase {
 
     /**
      * maxAttempts 초과 시 FAILED 확정 테스트
+     *
      * @throws Exception
      */
     @Test

@@ -4,6 +4,7 @@ import com.domain.taskflow.api.dto.JobCreateRequest;
 import com.domain.taskflow.repo.JobRepository;
 import com.domain.taskflow.service.JobService;
 import com.domain.taskflow.support.IntegrationTestBase;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Tag("integration")
 public class Week2_CasClaimRunningTest extends IntegrationTestBase {
 
     private final JobService jobService;
