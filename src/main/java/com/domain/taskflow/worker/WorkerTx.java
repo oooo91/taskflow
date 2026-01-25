@@ -26,7 +26,7 @@ public class WorkerTx {
     private final RetryPolicy retryPolicy;
 
     /**
-     * ✅ claim + RUNNING 이벤트 + attempt 생성까지 한 번에 확정 커밋
+     * claim + RUNNING 이벤트 + attempt 생성까지 한 번에 확정 커밋
      * - 반환값: 이번 시도의 attemptNo (claim 실패면 0)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -64,7 +64,7 @@ public class WorkerTx {
         jobAttemptRepository.save(attempt);
 
         // job 확정
-        job.markSuccessFinal(); // ✅ 여기서 runningStartedAt=null 이미 하고 있음
+        job.markSuccessFinal(); // runningStartedAt=null + attemptCount++
         jobRepository.save(job);
 
         jobEventRepository.save(new JobEvent(
@@ -83,7 +83,7 @@ public class WorkerTx {
         attempt.markFailed(code, msg);
         jobAttemptRepository.save(attempt);
 
-        job.markFailedFinal(code, msg); // ✅ runningStartedAt=null
+        job.markFailedFinal(code, msg); // runningStartedAt=null + attemptCount++
         jobRepository.save(job);
 
         jobEventRepository.save(new JobEvent(
@@ -102,7 +102,7 @@ public class WorkerTx {
         attempt.markFailed("CANCELED", "cancelRequested=true");
         jobAttemptRepository.save(attempt);
 
-        job.markCanceledFinal(); // ✅ runningStartedAt=null
+        job.markCanceledFinal();
         jobRepository.save(job);
 
         jobEventRepository.save(new JobEvent(
@@ -126,7 +126,7 @@ public class WorkerTx {
 
         if (retryable && hasMoreAttempts) {
             OffsetDateTime nextRunAt = retryPolicy.computeNextRunAt(attemptNo, now);
-            job.markRetryWait(nextRunAt, code, message); // ✅ runningStartedAt=null + attemptCount++
+            job.markRetryWait(nextRunAt, code, message); // runningStartedAt=null + attemptCount++
 
             jobRepository.save(job);
 
