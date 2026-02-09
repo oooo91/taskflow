@@ -1,9 +1,8 @@
-## TaskFlow  
-- 실패, 중복, 장애를 전제로 설계한 JOB 실행 및 운영 플랫폼
----
+# TaskFlow  
+실패, 중복, 장애를 전제로 설계한 JOB 실행 및 운영 플랫폼
 
-### 1. 문제 정의
 
+## 1. 문제 정의
 실무에서 병렬/비동기 작업 시스템은 다음 문제를 반복적으로 겪음
 
 - 동일 작업이 중복 실행된다
@@ -13,10 +12,8 @@
 - 상태 변경이 유실되어 현재 상황을 한눈에 파악할 수 없다
 - 장애를 재현, 측정, 검증할 방법이 없다
 
----
 
-### 2. 프로젝트 배경
-
+## 2. 프로젝트 배경
 이전 실무에서는 로컬 실행기에서 브라우저/디바이스 기반 작업을 무인으로 실행하고
 중앙 서버가 실행 결과와 실패 원인을 수집/저장하는 구조를 운영했다. (중앙 서버와 로컬 실행기(Agent)가 분리된 구조)
 
@@ -26,24 +23,24 @@
 - 문제 발생 시 로그를 확인하고 재현을 시도해야만 원인을 추적할 수 있음
 - 전체 시스템 상태를 중앙에서 요약해 관측하기 어려움
 
-TaskFlow는 이런 경험을 바탕으로,
-안정적으로 문제 원인 분석/관측하고 역할 분리를 명확하게 하여 유지보수가 쉽게 하는 것을 목표로 한다.
+TaskFlow는 이러한 경험을 바탕으로,
+분산 실행 환경에서 발생하는 실패를 안정적으로 관측하고,
+실행과 운영 책임을 분리해 유지보수 비용을 줄이는 실행 플랫폼을 목표로 한다.
 
----
 
-### 2. 프로젝트 목표
+## 3. 프로젝트 목표
 
-- 실패를 예외가 아닌 **정상 흐름으로 다룬다**
-- 동시 요청/실행에서도 **정합성을 보장한다**
-- 워커/인프라 장애 상황에서도 **자동으로 복구된다**
-- 운영자가 시스템 상태를 **실시간으로 관측**할 수 있다
-- 설계가 **부하·장애 실험으로 검증**된다
+- 실패를 예외가 아닌 정상 흐름으로 처리
+- 동시 요청/병렬 실행 환경에서도 정합성 보장
+- 워커/인프라 장애 상황에서도 자동 복구 가능
+- 운영자가 시스템 상태를 실시간으로 관측
+- 설계를 부하/장애 실험으로 검증 가능
 
----
 
-## 3. 전체 아키텍처
 
-```text
+## 4. 전체 아키텍처
+
+```
 [Client / Internal Service / Admin]
         |
         | REST API
@@ -80,13 +77,13 @@ TaskFlow는 이런 경험을 바탕으로,
 +---------------------+                   |
 | Admin UI (SSE)      |                   v
 +---------------------+           External Targets
+
 ```
 
----
 
-## 4. 데이터 모델 (ERD)
+## 5. 데이터 모델 (ERD)
 
-```text
+```
     JOBS {
         UUID id PK
         STRING job_key "UNIQUE"
@@ -123,20 +120,11 @@ TaskFlow는 이런 경험을 바탕으로,
         TIMESTAMP published_at
         TIMESTAMP created_at
     }
-
-    JOBS ||--o{ JOB_ATTEMPTS : has
-    JOBS ||--o{ JOB_EVENTS : emits
-
 ```
 
---- 
 
-## 5. 상태 흐름도
-- 상태 전이는 Service Layer 단일 지점에서만 수행
-- RUNNING 전환은 DB CAS (UPDATE … WHERE status = PENDING) 로 강제
-- 모든 상태 변경은 Outbox 이벤트로 기록
-
-```text
+## 6. 상태 흐름도
+```
 PENDING
    |
    | (worker DB CAS)
@@ -146,19 +134,19 @@ RUNNING
    | success
    v
 SUCCESS
-
+--------------------------------------
 RUNNING
    |
    | failure (retryable)
    v
 RETRY_WAIT --(scheduler)--> PENDING
-
+--------------------------------------
 RUNNING
    |
    | failure (non-retryable or max attempts)
    v
 FAILED
-
+--------------------------------------
 PENDING / RUNNING
    |
    | cancel request
@@ -166,10 +154,12 @@ PENDING / RUNNING
 CANCELED
 
 ```
+- 상태 전이는 서비스 계층 단일 지점에서만 수행
+- RUNNING 전환은 DB CAS (UPDATE … WHERE status = PENDING) 로 강제
+- 모든 상태 변경은 Outbox 이벤트로 기록
 
---- 
 
-## 6. 기능
+## 7. 기능
 - Job 생성 / 조회 / 취소 API
 - job_key 기반 멱등성 보장
 - 병렬 Worker 실행
@@ -177,33 +167,29 @@ CANCELED
 - heartbeat 기반 stale job 회수
 - Outbox + SSE 실시간 상태 스트리밍
 
---- 
 
-## 7. 정합성 고려
+## 8. 정합성 고려
 - Job 생성 시 job_key UNIQUE 제약으로 중복 생성 방지
 - Job 실행 시 DB CAS로 RUNNING 상태 획득
 - Redis Lock으로 실행 중복 방지
 - Redis 장애 시에도 DB CAS 기반 정합성 유지
 
---- 
 
-## 8. 장애 복구
+## 9. 장애 복구
 - Worker는 주기적으로 heartbeat를 Redis에 갱신
 - heartbeat age + RUNNING duration 기준으로 stale job 판단
 - stale job을 RETRY_WAIT 또는 FAILED 상태로 회수
 - 워커 재기동 시 작업 자동 복구
 
---- 
 
-## 9. 이벤트 전달
+## 10. 이벤트 전달
 - 모든 상태 변경을 Outbox 테이블에 이벤트로 저장
 - Publisher가 Outbox를 polling하여 SSE로 전송
 - published_at 컬럼으로 이벤트 중복 전송 방지
 - 운영자는 Admin UI에서 실시간 상태 관측 가능
 
---- 
 
-## 10. 검증
+## 11. 실험/검증
 - 부하 테스트
   - k6 기반 동시 Job 생성 시나리오
   - 실패 + 재시도 혼합 시나리오
@@ -213,9 +199,8 @@ CANCELED
   - Redis 일시 중단 → DB CAS 기반 실행 유지
   - DB 지연 → 재시도 및 상태 안정성 유지
 
---- 
 
-## 11. 실행 
+## 12. 실행 
 - 로컬
 ```
 docker compose up -d
@@ -227,9 +212,8 @@ docker compose up -d
   - GitHub Actions 자동 배포
   - Docker 이미지 빌드 → GHCR push → AWS EC2 배포
  
---- 
 
-## 12. 데모 시나리오 
+## 13. 데모 시나리오 
 1. /admin/stream 접속 (SSE 실시간 상태 확인)
 2. 정상 Job 생성 → RUNNING → SUCCESS
 3. 실패 Job 생성 → RETRY_WAIT → 재시도 → SUCCESS
