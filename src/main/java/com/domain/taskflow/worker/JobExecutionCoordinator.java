@@ -1,0 +1,32 @@
+package com.domain.taskflow.worker;
+
+import com.domain.taskflow.metrics.JobMetrics;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.UUID;
+
+@Component
+@RequiredArgsConstructor
+public class JobExecutionCoordinator {
+
+    private final RedisLockService lockService;
+    private final JobMetrics jobMetrics;
+    private final WorkerRunner workerRunner;
+
+    private final String workerId = "worker-1"; // 클라우드 올릴 떈 host/pod 로 변경
+
+    public void runOneWithLock(UUID jobId) {
+        String lockKey = lockService.jobLockKey(jobId.toString());
+        boolean locked = lockService.tryLock(lockKey, workerId, Duration.ofSeconds(30));
+        if (!locked) return;
+
+        try {
+            // Job을 실행하는 전체 시간 측정
+            jobMetrics.timer().record(() -> workerRunner.runOne(jobId));
+        } finally {
+            lockService.unlock(lockKey, workerId);
+        }
+    }
+}

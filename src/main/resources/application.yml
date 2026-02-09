@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/taskflow
+    username: taskflow
+    password: taskflow
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway? ??? ???? validate ??
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.flywaydb: debug
+    com.zaxxer.hikari: debug
+
+taskflow:
+  retry:
+    base-ms: 50
+    cap-ms: 200
+  worker:
+    id: worker-1
+  heartbeat:
+    ttl-ms: 10000
+    interval-ms: 2000
+  reaper:
+    interval-ms: 1000
+    stale-running-ms: 15000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      app: taskflow
