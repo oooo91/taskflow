@@ -291,3 +291,84 @@ docker compose up -d
 3. 실패 Job 생성 → RETRY_WAIT → 재시도 → SUCCESS
 4. 워커 강제 종료 → stale job 회수 확인
 5. /actuator/prometheus 메트릭 확인
+
+
+## 14. 트러블슈팅
+- 환경: 단일 EC2 + Docker Compose + Nginx Reverse Proxy
+- 목표: 외부 노출은 80만 허용하고, 스트리밍(SSE)과 관측 도구는 최소 노출 원칙으로 구성
+
+<details>
+        <summary>접기/펼치기
+        </summary> 
+
+
+
+### 14.1 SSE 무한 로딩 (Admin Stream 연결 유지 실패)
+#### 1) 증상
+- /admin/stream에 접속해 connect 버튼을 눌러도 무한 로딩(연결이 유지되지 않음)
+
+#### 2) 원인
+- SSE는 “긴 연결 + 실시간 스트리밍” 특성상 프록시가 버퍼링/캐싱하거나 타임아웃을 걸면 연결이 끊기기 쉬움
+- Nginx 기본 동작(버퍼링/읽기 타임아웃) 때문에 SSE 연결이 안정적으로 유지되지 않았음
+
+#### 3) 해결
+- Nginx에서 /stream/ (또는 스트림 관련 경로)에 대해 버퍼링/캐시를 끄고, read timeout을 길게 설정
+- location /stream/ 블록을 location /보다 우선 적용되도록 위치 조정
+```location /stream/ {
+  proxy_pass http://taskflow_app;
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+  proxy_buffering off;
+  proxy_cache off;
+  proxy_read_timeout 3600s;
+
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+#### 4) 확인
+- Nginx reload/restart 후 브라우저에서 연결 유지 및 이벤트 수신 확인
+
+
+
+### 14.2 Grafana/Prometheus UI 접근 (외부 노출 없이 안전하게)
+#### 1) 증상
+- 서비스 인바운드는 80만 열어둔 상태
+- Grafana/Prometheus는 컨테이너 내부 포트만 열려 있어 외부에서 바로 접속 불가
+
+#### 2) 원인
+- Grafana/Prometheus는 같은 Docker 네트워크 내부에서만 접근하도록 구성
+  - 예: Prometheus가 app:8081로 scrape 가능 (EC2 호스트 포트 노출 불필요)
+
+#### 3) 해결
+- Grafana/Prometheus는 외부 노출을 하지 않고, EC2 루프백(127.0.0.1)에만 바인딩해서 “서버 내부에서만 접근 가능”하게 구성
+- 필요 시 로컬 PC에서 SSH 터널링으로 안전하게 접속
+```# compose.prod.yml 예시
+grafana:
+  ports:
+    - "127.0.0.1:3000:3000"
+prometheus:
+  ports:
+    - "127.0.0.1:9090:9090"
+```
+로컬 pc 에서 터널링
+```
+ssh -i my-key.pem -L 3000:localhost:3000 -L 9090:localhost:9090 ubuntu@<EC2_PUBLIC_IP>
+```
+접속:
+
+http://localhost:3000
+ (Grafana)
+
+http://localhost:9090
+ (Prometheus)
+
+왜 127.0.0.1 바인딩인가?
+
+0.0.0.0:9090처럼 전체 인터페이스에 열면, 보안그룹 설정 실수 시 외부 노출 위험이 커짐
+127.0.0.1은 루프백만 허용되어 외부에서 물리적으로 접근 불가(안전장치가 강함)
+
+
+</details>
