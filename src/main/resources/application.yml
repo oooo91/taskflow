@@ -1,14 +1,12 @@
-server:
-  port: 8080
-
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/taskflow
-    username: taskflow
-    password: taskflow
+  application:
+    name: taskflow
+
   jpa:
     hibernate:
-      ddl-auto: validate   # Flyway? ??? ???? validate ??
+      # 운영/로컬 모두 "스키마는 Flyway로 관리"한다는 전제에서
+      # validate로 두면, 엔티티-DB 불일치 시 앱이 바로 실패해서 안전함.
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
@@ -18,23 +16,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-
-logging:
-  level:
-    org.hibernate.SQL: debug
-    org.flywaydb: debug
-    com.zaxxer.hikari: debug
-
 taskflow:
+  # TaskFlow 공통 정책값(환경별로 정말 다르게 쓰고 싶으면 local/prod에서 override 가능)
   retry:
     base-ms: 50
     cap-ms: 200
-  worker:
-    id: worker-1
   heartbeat:
     ttl-ms: 10000
     interval-ms: 2000
@@ -43,13 +29,24 @@ taskflow:
     stale-running-ms: 15000
 
 management:
+  # Actuator는 "관리 포트 분리"를 공통 기본으로 둔다 (8081)
+  # 로컬/운영 모두 동일하게 가져가면 nginx/prometheus 설정이 단순해짐
+  server:
+    port: 8081
+
   endpoints:
     web:
+      base-path: /actuator
+      # exposure include는 환경별 요구가 다르니 여기서는 "기본 최소값"만 두거나,
+      # 혹은 아예 제거하고 local/prod에서만 정의하는 것도 좋음.
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info
+
   endpoint:
     health:
-      show-details: always
+      show-details: never
+
   metrics:
     tags:
+      # 모든 메트릭에 app 태그를 붙여서 PromQL/Grafana에서 필터링하기 쉬움
       app: taskflow

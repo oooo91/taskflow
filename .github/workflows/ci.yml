@@ -1,0 +1,68 @@
+name: Deploy to EC2 (main)
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  packages: write  # GHCR push 권한
+
+jobs:
+  test-build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 + Gradle 캐시
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # .gradlew 권한 추가
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # 테스트는 CI에서 수행 (Testcontainers 포함)
+      - name: Test (unit + integration)
+        run: ./gradlew test integrationTest --no-daemon
+
+      # GHCR 로그인 (push용)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 이미지 빌드/푸시 (latest + main-<sha>)
+      - name: Build & Push (latest + sha)
+        run: |
+          OWNER=${{ github.repository_owner }}
+          IMAGE=ghcr.io/$OWNER/taskflow
+          SHA=${{ github.sha }}
+
+          docker build -t $IMAGE:latest -t $IMAGE:main-$SHA .
+          docker push $IMAGE:latest
+          docker push $IMAGE:main-$SHA
+
+  deploy:
+    needs: test-build-push
+    runs-on: ubuntu-latest
+    steps:
+      # SSH로 EC2 접속 → 서버에서 docker compose pull/up 수행하는 스크립트 실행
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            export GHCR_USER='${{ secrets.GHCR_USER }}'
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            bash ~/taskflow/scripts/deploy.sh
+            bash ~/taskflow/scripts/healthcheck.sh

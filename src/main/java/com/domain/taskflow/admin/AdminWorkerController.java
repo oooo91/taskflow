@@ -2,12 +2,19 @@ package com.domain.taskflow.admin;
 
 import com.domain.taskflow.heartbeat.HeartbeatService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * worker heartbeat 삭제 (워커 죽음 시뮬레이션)
  */
+@Profile("!prod")
+@ConditionalOnProperty(
+        name = "taskflow.chaos.enabled",
+        havingValue = "true"
+)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/workers")

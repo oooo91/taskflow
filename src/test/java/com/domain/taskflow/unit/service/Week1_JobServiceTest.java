@@ -4,6 +4,7 @@ import com.domain.taskflow.api.dto.JobCreateRequest;
 import com.domain.taskflow.domain.Job;
 import com.domain.taskflow.domain.JobEvent;
 import com.domain.taskflow.domain.JobStatus;
+import com.domain.taskflow.metrics.JobMetrics;
 import com.domain.taskflow.repo.JobEventRepository;
 import com.domain.taskflow.repo.JobRepository;
 import com.domain.taskflow.service.JobService;
@@ -35,6 +36,9 @@ class Week1_JobServiceTest {
 
     @Mock
     JobEventRepository jobEventRepository;
+
+    @Mock
+    JobMetrics jobMetrics;
 
     @InjectMocks
     JobService jobService;

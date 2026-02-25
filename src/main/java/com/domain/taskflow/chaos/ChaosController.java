@@ -1,12 +1,19 @@
 package com.domain.taskflow.chaos;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+@Profile("!prod")
+@ConditionalOnProperty(
+        name = "taskflow.chaos.enabled",
+        havingValue = "true"
+)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/chaos")

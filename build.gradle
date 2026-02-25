@@ -45,13 +45,23 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql:1.20.4'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+tasks.test {
+    useJUnitPlatform {
+        excludeTags "integration"
+    }
 }
 
-tasks.register('integrationTest', Test) {
+tasks.register("integrationTest", Test) {
+    group = "verification"
+    description = "Runs integration tests (Testcontainers)."
+
     useJUnitPlatform {
-        includeTags 'integration'
+        includeTags "integration"
     }
-    shouldRunAfter test
+
+    shouldRunAfter tasks.test
+}
+
+tasks.check {
+    dependsOn tasks.named("integrationTest")
 }

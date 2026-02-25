@@ -1,0 +1,48 @@
+server:
+  # 서비스 포트
+  port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    # 로컬 전략: 앱은 호스트에서 실행, DB는 도커로 포트포워딩
+    # 그래서 localhost:5432 로 접근하는 게 맞음.
+    url: jdbc:postgresql://localhost:5432/taskflow
+    username: taskflow
+    password: taskflow
+
+  data:
+    redis:
+      # 로컬 전략: redis도 도커 포트포워딩 → localhost
+      host: localhost
+      port: 6379
+
+management:
+  # Actuator 전용 포트(로컬에서도 분리하면 nginx/prom 설정이 깔끔해짐)
+  server:
+    port: 8081
+
+  endpoints:
+    web:
+      exposure:
+        # 로컬에서는 진단 편의상 넓게 열어도 OK
+        include: health,info,metrics,prometheus,loggers
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.hibernate.SQL: OFF
+    org.flywaydb: INFO
+    com.zaxxer.hikari: INFO
+
+taskflow:
+  chaos:
+    enabled: true
+  worker:
+    id: worker-local-1

@@ -1,0 +1,59 @@
+services:
+  app:
+    image: ghcr.io/oooo91/taskflow:latest
+    container_name: taskflow-app
+    depends_on:
+      - postgres
+      - redis
+
+    env_file:
+      - ./.env.prod
+
+    environment:
+      # 운영 프로파일
+      SPRING_PROFILES_ACTIVE: prod
+
+      # JVM 메모리 옵션(EC2 스펙에 맞춰 조정)
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+
+    # 같은 도커 네트워크 내부에서만 열어두는 포트
+    expose:
+      - "8080"  # 서비스
+      - "8081"  # 관리(Actuator)
+
+  nginx:
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+
+  postgres:
+    env_file:
+      - ./.env.prod
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    expose:
+      - "5432"
+
+  redis:
+    expose:
+      - "6379"
+
+  prometheus:
+    # 운영 prometheus는 app 컨테이너(관리포트)로 직접 scrape 해야 함.
+    volumes:
+      - ./prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+    expose:
+      - "9090"
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:3000:3000"

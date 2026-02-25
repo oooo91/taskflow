@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 60s
+
+scrape_configs:
+  - job_name: taskflow
+    metrics_path: /actuator/prometheus
+    static_configs:
+      # 운영은 내부 네트워크에서 app:8081로 직접 접근
+      - targets: ["app:8081"]
