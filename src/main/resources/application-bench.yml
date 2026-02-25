@@ -49,7 +49,7 @@ logging:
     org.hibernate.SQL: OFF
     org.flywaydb: INFO
     com.zaxxer.hikari: INFO
-    com.domain.taskflow.worker.RedisLockService: WARN  # tryLock INFO 로그 폭탄 방지
+    com.domain.taskflow.worker.RedisLockService: WARN
 
 taskflow:
   chaos:

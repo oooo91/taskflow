@@ -38,8 +38,8 @@ management:
 logging:
   level:
     org.hibernate.SQL: OFF
-    org.flywaydb: debug
-    com.zaxxer.hikari: debug
+    org.flywaydb: INFO
+    com.zaxxer.hikari: INFO
 
 taskflow:
   chaos:
