@@ -37,7 +37,7 @@ management:
 
 logging:
   level:
-    org.hibernate.SQL: debug
+    org.hibernate.SQL: OFF
     org.flywaydb: debug
     com.zaxxer.hikari: debug
 

@@ -37,6 +37,9 @@ public class JobMetrics {
     // attempt 처리 시간 타이머 (type/result 조합별로 캐시)
     private final ConcurrentHashMap<String, Timer> processingTimer = new ConcurrentHashMap<>();
 
+    // stale 회수 "지연(overshoot)" 타이머 (outcome 태그별로 분리)
+    private final ConcurrentHashMap<String, Timer> staleOvershootTimers = new ConcurrentHashMap<>();
+
     public JobMetrics(MeterRegistry registry) {
         this.registry = registry;
 
@@ -93,7 +96,6 @@ public class JobMetrics {
     /**
      * attempt 처리 시간 기록
      * prometheus - taskflow_job_processing_seconds_{count,sum,max} 로 노출됨
-     *
      * @param jobType
      * @param result
      * @param duration
@@ -109,7 +111,22 @@ public class JobMetrics {
                         .tag("result", result == null ? "UNKNOWN" : result)
                         .register(registry)
         );
-
         t.record(duration);
+    }
+
+    /**
+     * stale 회수 지연(overshoot) 메트릭 추가
+     * @param overshoot
+     * @param outcome
+     */
+    public void recordStaleReapOvershoot(Duration overshoot, String outcome) {
+        Timer t = staleOvershootTimers.computeIfAbsent(outcome, o ->
+                Timer.builder("taskflow_stale_reap_overshoot")
+                        .description("리퍼가 staleRunningMs를 초과한 오래된 작업을 회수한 시간")
+                        .tag("outcome", o) // RETRY_WAIT or FAILED
+                        .publishPercentileHistogram()
+                        .register(registry)
+        );
+        t.record(overshoot);
     }
 }
