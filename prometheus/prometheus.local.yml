@@ -1,7 +1,7 @@
 global:
   # Prometheus가 타겟을 얼마나 자주 긁을지.
   # 로컬 디버깅은 2s도 가능하지만, CPU/IO가 늘 수 있음.
-  scrape_interval: 15s
+  scrape_interval: 1s
 
 scrape_configs:
   - job_name: taskflow

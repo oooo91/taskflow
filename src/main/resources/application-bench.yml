@@ -1,0 +1,69 @@
+server:
+  # 서비스 포트
+  port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: bench
+
+  datasource:
+    # 로컬 전략: 앱은 호스트에서 실행, DB는 도커로 포트포워딩
+    # 그래서 localhost:5432 로 접근하는 게 맞음.
+    url: jdbc:postgresql://localhost:5432/taskflow
+    username: taskflow
+    password: taskflow
+    hikari:
+      maximum-pool-size: 50 # 1000 threads 라도 db 는 이 정도면 충분하다고 함 (claim/finalize 에만 잠깐 사용)
+      minimum-idle: 10
+
+  data:
+    redis:
+      # 로컬 전략: redis도 도커 포트포워딩 → localhost
+      host: localhost
+      port: 6379
+
+  task:
+    scheduling:
+      pool:
+        size: 4 # @Scheduled가 단일 스레드에 몰리는 것 방지(워커 tick/heartbeat/retry/reaper 등)
+
+management:
+  # Actuator 전용 포트(로컬에서도 분리하면 nginx/prom 설정이 깔끔해짐)
+  server:
+    port: 8081
+
+  endpoints:
+    web:
+      exposure:
+        # 로컬에서는 진단 편의상 넓게 열어도 OK
+        include: health,info,metrics,prometheus,loggers
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: OFF
+    org.flywaydb: INFO
+    com.zaxxer.hikari: INFO
+    com.domain.taskflow.worker.RedisLockService: WARN  # tryLock INFO 로그 폭탄 방지
+
+taskflow:
+  chaos:
+    enabled: true
+  worker:
+    id: worker-bench-1
+    pool-size: 1000
+    poll-ms: 200
+    fetch-size: 2000
+    lock-lease-ms: 120000
+  metrics:
+    running-gauge-interval-ms: 1000
+  # 동시성 테스트에선 reaper가 RUNNING 1000개를 매초 스캔하면 부담이 큼 → 사실상 비활성화
+  reaper:
+    interval-ms: 5000
+    stale-running-ms: 600000
+
