@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -43,11 +44,11 @@ public class StaleJobReaper {
             if (heartbeatService.isAlive(workerId)) continue;
 
             // stale 이면 회수
-            handleStale(job, now);
+            handleStale(job, now, staleRunningMs);
         }
     }
 
-    private void handleStale(Job job, OffsetDateTime now) {
+    private void handleStale(Job job, OffsetDateTime now, long staleRunningMs) {
         // stale 회수 사유
         String code = "STALE_WORKER";
         String message = "Worker heartbeat missing: workerId=" + job.getWorkerId();
@@ -56,7 +57,15 @@ public class StaleJobReaper {
         boolean retryable = retryPolicy.isRetryable("EXEC_ERROR");
         boolean hasMoreAttempts = job.getAttemptCount() < job.getMaxAttempts();
 
-        if (retryable && hasMoreAttempts) {
+        String outcome = (retryable && hasMoreAttempts) ? "RETRY_WAIT" : "FAILED";
+
+        if (job.getRunningStartedAt() != null) {
+            long ageMs = Duration.between(job.getRunningStartedAt(), now).toMillis();
+            long overshootMs = Math.max(0L, ageMs - staleRunningMs);
+            jobMetrics.recordStaleReapOvershoot(Duration.ofMillis(overshootMs), outcome);
+        }
+
+        if ("RETRY_WAIT".equals(outcome)) {
             OffsetDateTime nextRunAt = now;
             job.markRetryWait(nextRunAt, code, message);
 

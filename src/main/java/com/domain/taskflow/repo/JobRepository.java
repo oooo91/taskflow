@@ -1,6 +1,7 @@
 package com.domain.taskflow.repo;
 
 import com.domain.taskflow.domain.Job;
+import com.domain.taskflow.domain.JobStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -82,4 +83,6 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
                 and j.runningStartedAt <= :cutoff
             """)
     List<Job> findRunningOlderThan(@Param("cutoff") OffsetDateTime cutoff);
+
+    long countByStatus(JobStatus status);
 }

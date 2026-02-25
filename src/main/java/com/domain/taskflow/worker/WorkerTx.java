@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -57,9 +58,11 @@ public class WorkerTx {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void finalizeSuccess(UUID jobId, int attemptNo) {
-        Job job = jobRepository.findById(jobId).orElseThrow();
+        OffsetDateTime now = OffsetDateTime.now();
 
-        // attempt 업데이트
+        Job job = jobRepository.findById(jobId).orElseThrow();
+        recordProcessingIfPossible(job, "SUCCESS", now);
+
         JobAttempt attempt = jobAttemptRepository.findByJobIdAndAttemptNo(jobId, attemptNo).orElseThrow();
         attempt.markSuccess();
         jobAttemptRepository.save(attempt);
@@ -74,13 +77,18 @@ public class WorkerTx {
                 "STATUS_CHANGED",
                 "{\"jobId\":\"" + jobId + "\",\"to\":\"SUCCESS\"}"
         ));
-
         jobMetrics.incSucceeded();
+        if (attemptNo > 1) {
+            jobMetrics.incRetrySuccessJobs();
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void finalizeFailed(UUID jobId, int attemptNo, String code, String msg) {
+        OffsetDateTime now = OffsetDateTime.now();
+
         Job job = jobRepository.findById(jobId).orElseThrow();
+        recordProcessingIfPossible(job, "FAILED", now);
 
         JobAttempt attempt = jobAttemptRepository.findByJobIdAndAttemptNo(jobId, attemptNo).orElseThrow();
         attempt.markFailed(code, msg);
@@ -95,13 +103,18 @@ public class WorkerTx {
                 "STATUS_CHANGED",
                 "{\"jobId\":\"" + jobId + "\",\"to\":\"FAILED\",\"errorCode\":\"" + code + "\"}"
         ));
-
         jobMetrics.incFailed();
+        if (attemptNo > 1) {
+            jobMetrics.incRetryFailedJobs();
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void finalizeCanceled(UUID jobId, int attemptNo) {
+        OffsetDateTime now = OffsetDateTime.now();
+
         Job job = jobRepository.findById(jobId).orElseThrow();
+        recordProcessingIfPossible(job, "CANCELED", now);
 
         JobAttempt attempt = jobAttemptRepository.findByJobIdAndAttemptNo(jobId, attemptNo).orElseThrow();
         attempt.markFailed("CANCELED", "cancelRequested=true");
@@ -130,9 +143,14 @@ public class WorkerTx {
         boolean hasMoreAttempts = attemptNo < job.getMaxAttempts(); // 1..maxAttempts 기준
 
         if (retryable && hasMoreAttempts) {
+            if (attemptNo == 1) {
+                jobMetrics.incRetryJobs(); // job당 1회만(첫 retry 진입 시점)
+            }
+            // 이때의 attempt는 RETRY_WAIT로 종료되는 것이므로 여기서 처리시간 기록
+            recordProcessingIfPossible(job, "RETRY_WAIT", now);
+
             OffsetDateTime nextRunAt = retryPolicy.computeNextRunAt(attemptNo, now);
             job.markRetryWait(nextRunAt, code, message); // runningStartedAt=null + attemptCount++
-
             jobRepository.save(job);
 
             jobEventRepository.save(new JobEvent(
@@ -141,10 +159,16 @@ public class WorkerTx {
                     "STATUS_CHANGED",
                     "{\"jobId\":\"" + jobId + "\",\"to\":\"RETRY_WAIT\",\"nextRunAt\":\"" + nextRunAt + "\",\"errorCode\":\"" + code + "\"}"
             ));
-
             jobMetrics.incRetryScheduled();
         } else {
             finalizeFailed(jobId, attemptNo, code, message);
         }
+    }
+
+    private void recordProcessingIfPossible(Job job, String result, OffsetDateTime now) {
+        if (job.getRunningStartedAt() == null || now == null) return;
+
+        Duration d = Duration.between(job.getRunningStartedAt(), now);
+        jobMetrics.recordProcessing(job.getType(), result, d);
     }
 }
