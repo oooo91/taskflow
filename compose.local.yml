@@ -1,0 +1,42 @@
+services:
+  # 로컬에서는 app 컨테이너를 띄우지 않는다.
+  # 앱은 IntelliJ에서 local profile로 실행.
+
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+
+    # 리눅스 도커에서 host.docker.internal이 안 잡힐 수 있어 추가
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  postgres:
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: taskflow
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.local.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  grafana_data: {} # 컨테이너 안의 /var/lib/grafana 폴더를 호스트에 영구 저장되는 grafana_data 볼륨에 연결

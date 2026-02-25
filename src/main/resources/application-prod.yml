@@ -1,0 +1,46 @@
+server:
+  # 서비스 포트(유저 트래픽)
+  port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    # 운영은 컨테이너 환경변수로 주입
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+management:
+  # Actuator 전용 포트를 분리해서 외부 노출을 제어하기 쉽게 함
+  server:
+    port: 8081
+
+  endpoints:
+    web:
+      exposure:
+        # 운영에서는 꼭 필요한 것만
+        include: health,info,prometheus
+
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    org.hibernate.SQL: info
+    org.flywaydb: info
+    com.zaxxer.hikari: info
+
+taskflow:
+  chaos:
+    enabled: false
+  worker:
+    id: ${TASKFLOW_WORKER_ID:worker-prod-1}
