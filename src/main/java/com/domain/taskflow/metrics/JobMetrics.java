@@ -16,7 +16,19 @@ public class JobMetrics {
     private final Counter jobCreated;
     private final Counter jobSucceeded;
     private final Counter jobFailed;
-    private final Counter jobRetried;
+
+    // retry 스케줄(= RETRY_WAIT로 전환된 횟수, 1 job이 여러 번 들어갈 수 있음)
+    private final Counter jobRetryScheduled;
+
+    // retry 대상 job 수 (job당 1회만 카운트)
+    private final Counter jobRetryJobs;
+
+    // retry 후 성공 job 수 (job당 1회만 카운트)
+    private final Counter jobRetrySuccessJobs;
+
+    // retry 후 최종 실패 job 수 (job당 1회만 카운트)
+    private final Counter jobRetryFailedJobs;
+
     private final Counter staleReaped;
 
     // runOne() 전체 타이머
@@ -28,10 +40,15 @@ public class JobMetrics {
     public JobMetrics(MeterRegistry registry) {
         this.registry = registry;
 
-        this.jobCreated = registry.counter("taskflow_job");
+        this.jobCreated = registry.counter("taskflow_job_created");
         this.jobSucceeded = registry.counter("taskflow_job_succeeded");
         this.jobFailed = registry.counter("taskflow_job_failed");
-        this.jobRetried = registry.counter("taskflow_job_retry_scheduled");
+
+        this.jobRetryScheduled = registry.counter("taskflow_job_retry_scheduled");
+        this.jobRetryJobs = registry.counter("taskflow_job_retry_jobs");
+        this.jobRetrySuccessJobs = registry.counter("taskflow_job_retry_success_jobs");
+        this.jobRetryFailedJobs = registry.counter("taskflow_job_retry_failed_jobs");
+
         this.staleReaped = registry.counter("taskflow_job_stale_reaped");
 
         this.jobRunTimer = registry.timer("taskflow_job_run_seconds");
@@ -50,7 +67,19 @@ public class JobMetrics {
     }
 
     public void incRetryScheduled() {
-        jobRetried.increment();
+        jobRetryScheduled.increment();
+    }
+
+    public void incRetryJobs() {
+        jobRetryJobs.increment();
+    }
+
+    public void incRetrySuccessJobs() {
+        jobRetrySuccessJobs.increment();
+    }
+
+    public void incRetryFailedJobs() {
+        jobRetryFailedJobs.increment();
     }
 
     public void incStaleReaped() {

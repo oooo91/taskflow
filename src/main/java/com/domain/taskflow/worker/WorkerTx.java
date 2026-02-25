@@ -78,6 +78,9 @@ public class WorkerTx {
                 "{\"jobId\":\"" + jobId + "\",\"to\":\"SUCCESS\"}"
         ));
         jobMetrics.incSucceeded();
+        if (attemptNo > 1) {
+            jobMetrics.incRetrySuccessJobs();
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -101,6 +104,9 @@ public class WorkerTx {
                 "{\"jobId\":\"" + jobId + "\",\"to\":\"FAILED\",\"errorCode\":\"" + code + "\"}"
         ));
         jobMetrics.incFailed();
+        if (attemptNo > 1) {
+            jobMetrics.incRetryFailedJobs();
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -137,6 +143,9 @@ public class WorkerTx {
         boolean hasMoreAttempts = attemptNo < job.getMaxAttempts(); // 1..maxAttempts 기준
 
         if (retryable && hasMoreAttempts) {
+            if (attemptNo == 1) {
+                jobMetrics.incRetryJobs(); // job당 1회만(첫 retry 진입 시점)
+            }
             // 이때의 attempt는 RETRY_WAIT로 종료되는 것이므로 여기서 처리시간 기록
             recordProcessingIfPossible(job, "RETRY_WAIT", now);
 
