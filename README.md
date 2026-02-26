@@ -372,3 +372,64 @@ http://localhost:9090
 
 
 </details>
+
+
+## 15. 수치/실험 6종 (정의 -> 실행 -> 기록)
+### 1. 동시 실행 1000건(단일 JVM)
+  - 목표: 워커 풀/폴링/페치/락 lease를 튜닝하여, 순간적으로 1000개 이상의 Job이 동시에 처리되는 상황에서 정합성(중복 실행 없음)과 관측을 확보
+```
+max_over_time(taskflow_jobs_running[10m])
+```
+### 2. 평균 처리 시간
+  - 정의: attempt.started_at → attempt.ended_at (또는 job.running_started_at → terminal) 평균 + p95를 함께 보고
+```
+1000 * increase(taskflow_job_processing_seconds_sum{result="SUCCESS"}[10m])
+     / increase(taskflow_job_processing_seconds_count{result="SUCCESS"}[10m])
+```
+### 3. 재시도 성공률
+  - db 집계
+     ```
+        with scope as (
+        select id
+        from jobs
+        where job_key like 'k6-retry-run1-%'
+        ),
+        retry_jobs as (
+        select distinct a.job_id
+        from job_attempts a
+        join scope s on s.id = a.job_id
+        where a.attempt_no >= 2
+        )
+        select
+        count(*) as retry_targets,
+        count(*) filter (where j.status='SUCCESS') as retry_success,
+        count(*) filter (where j.status='FAILED') as retry_failed,
+        round(100.0 * count(*) filter (where j.status='SUCCESS') / nullif(count(*),0), 2) as retry_success_rate_percent
+        from retry_jobs r
+        join jobs j on j.id = r.job_id;
+        ```
+  
+  - PromQL
+        ```
+        increase(taskflow_job_retry_success_jobs_total[10m]) / clamp_min(increase(taskflow_job_retry_jobs_total[10m]), 1)
+        ```
+
+### 4. stale 회수 시간
+   - 정의: RUNNING 시작 시각(job.running_started_at)부터 stale reaper가 'STALE 회수 이벤트'를 남길 때까지
+   - 실험 방법: worker 2개 띄우고 한쪽 heartbeat를 끊기(또는 프로세스 kill) → reaper가 회수하는 시점을 측정.
+        ```
+        1000 *
+        rate(taskflow_stale_reap_overshoot_seconds_sum[5m]) /
+        clamp_min(rate(taskflow_stale_reap_overshoot_seconds_count[5m]), 1)
+        ```
+
+
+
+### 5. TPS 측정
+   - (a) Ingress TPS(POST /jobs), (b) Processing TPS(성공+실패 완료)
+        ```
+        sum(rate(http_server_requests_seconds_count{uri="/jobs",method="POST",status=~"2.."}[1m]))
+        sum(rate(taskflow_job_succeeded_total[1m])) + sum(rate(taskflow_job_failed_total[1m]))
+        ```
+
+
