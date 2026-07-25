@@ -1,5 +1,6 @@
 # TaskFlow  
 실패, 중복, 장애를 전제로 설계한 JOB 실행 및 운영 플랫폼
+pdf: https://app.notion.com/p/329a80bccfc9801d81cdf6b83263d2f8?source=copy_link
 
 
 ## 1. 문제 정의
